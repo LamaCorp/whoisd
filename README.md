@@ -13,7 +13,7 @@ Supported queries:
 
 ## Installation
 
-Binaries are provided for a wide range of systems in GitLab and GitHub releases.
+Binaries are provided for a wide range of systems in GitHub releases.
 
 Docker images are available at
 https://gitlab.com/lama-corp/infra/tools/whoisd/container_registry.
@@ -24,3 +24,11 @@ Available environment variables:
 
 - `WHOISD_LISTEN`: defaults to `:43`
 - `WHOISD_LOG_LEVEL`: defaults to `warn`
+
+## License
+
+Copyright Marc 'risson' Schmitt 2026. Licensed under the [EUPL-1.2 or later](./LICENSE) license.
+
+## Releasing
+
+Run the "Release" workflow with the version to be release. The CI takes care of the rest.

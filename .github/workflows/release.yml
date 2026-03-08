@@ -1,0 +1,149 @@
+---
+name: Release
+
+"on":
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 1.2.3). Do not prefix with a `v`"
+        required: true
+        type: string
+
+jobs:
+  binaries:
+    permissions:
+      # Needed for attestation
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64 }
+          - { goos: linux, goarch: 386 }
+          - { goos: linux, goarch: arm, goarm: "6" }
+          - { goos: linux, goarch: arm64 }
+          - { goos: windows, goarch: amd64 }
+          - { goos: windows, goarch: 386 }
+          - { goos: windows, goarch: arm, goarm: "6" }
+          - { goos: windows, goarch: arm64 }
+          - { goos: darwin, goarch: amd64 }
+          - { goos: darwin, goarch: arm64 }
+          - { goos: freebsd, goarch: amd64 }
+          - { goos: freebsd, goarch: 386 }
+          - { goos: freebsd, goarch: arm, goarm: "6" }
+          - { goos: freebsd, goarch: arm64 }
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: go.mod
+      - id: names
+        shell: bash
+        run: |
+          BINARY_NAME=whoisd
+          ARCHIVE_NAME="${BINARY_NAME}-v${{ inputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            echo "binary=${BINARY_NAME}.exe" >> "$GITHUB_OUTPUT"
+            echo "archive=${ARCHIVE_NAME}.zip" >> "$GITHUB_OUTPUT"
+          else
+            echo "binary=${BINARY_NAME}" >> "$GITHUB_OUTPUT"
+            echo "archive=${ARCHIVE_NAME}.tar.gz" >> "$GITHUB_OUTPUT"
+          fi
+      - name: build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: "0"
+        run: |
+          go build \
+            -trimpath \
+            -ldflags="-s -w -X main.version=v${{ inputs.version }} -X main.commit=${{ github.sha }}" \
+            -o dist/${{ steps.names.outputs.binary }} \
+            ./...
+      - name: archive
+        if: "matrix.goos != 'windows'"
+        run: tar -czf dist/${{ steps.names.outputs.archive }} -C dist ${{ steps.names.outputs.binary }}
+      - name: archive
+        if: "matrix.goos == 'windows'"
+        run: cd dist && zip ${{ steps.names.outputs.archive }} ${{ steps.names.outputs.binary }}
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-path: dist/${{ steps.names.outputs.archive }}
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ${{ steps.names.outputs.archive }}
+          path: dist/${{ steps.names.outputs.archive }}
+          if-no-files-found: error
+          retention-days: 7
+  container:
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload container images to ghcr.io
+      packages: write
+      # Needed for attestation
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        id: push
+        with:
+          file: Dockerfile
+          context: .
+          build-args: |
+            VERSION=${{ inputs.version }}
+            COMMIT=${{ github.sha }}
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/lamacorp/whoisd:v${{ inputs.version }}
+          push: true
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        id: attest
+        with:
+          subject-name: ghcr.io/lamacorp/whoisd
+          subject-digest: "${{ steps.push.outputs.digest }}"
+          push-to-registry: true
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to create the release
+      contents: write
+    needs:
+      - binaries
+      - container
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        with:
+          path: dist
+          merge-multiple: true
+      - working-directory: dist
+        run: |
+          rm *.dockerbuild
+          sha256sum * > checksums.txt
+      - uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        with:
+          target_commitish: ${{ github.sha }}
+          tag_name: v${{ inputs.version }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/**
+            LICENSE
