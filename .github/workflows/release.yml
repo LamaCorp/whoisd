@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           BINARY_NAME=whoisd
-          ARCHIVE_NAME="${BINARY_NAME}-v${{ inputs.tag }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          ARCHIVE_NAME="${BINARY_NAME}-v${{ inputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}"
           if [ "${{ matrix.goos }}" = "windows" ]; then
             echo "binary=${BINARY_NAME}.exe" >> "$GITHUB_OUTPUT"
             echo "archive=${ARCHIVE_NAME}.zip" >> "$GITHUB_OUTPUT"
@@ -63,7 +63,7 @@ jobs:
         run: |
           go build \
             -trimpath \
-            -ldflags="-s -w -X main.version=v${{ inputs.tag }} -X main.commit=${{ github.sha }}" \
+            -ldflags="-s -w -X main.version=v${{ inputs.version }} -X main.commit=${{ github.sha }}" \
             -o dist/${{ steps.names.outputs.binary }} \
             ./...
       - name: archive
@@ -107,10 +107,10 @@ jobs:
           file: Dockerfile
           context: .
           build-args: |
-            VERSION=${{ inputs.tag }}
+            VERSION=${{ inputs.version }}
             COMMIT=${{ github.sha }}
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/lamacorp/whoisd:v${{ inputs.tag }}
+          tags: ghcr.io/lamacorp/whoisd:v${{ inputs.version }}
           push: true
       - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         id: attest
