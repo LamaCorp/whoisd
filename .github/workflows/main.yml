@@ -1,5 +1,6 @@
 ---
 name: Main
+
 permissions:
   contents: read
 
