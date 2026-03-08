@@ -1,5 +1,7 @@
 ---
 name: Main
+permissions:
+  contents: read
 
 "on":
   push:
