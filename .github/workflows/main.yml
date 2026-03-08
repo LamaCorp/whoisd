@@ -50,7 +50,6 @@ jobs:
       - run: |
           WHOISD_LISTEN=:10043 WHOISD_LOG_LEVEL=debug ./whoisd &
           whois -h localhost -p 10043 example.com
-          fg
   build-container:
     runs-on: ubuntu-latest
     permissions:
