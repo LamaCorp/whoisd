@@ -13,7 +13,7 @@ Supported queries:
 
 ## Installation
 
-Binaries are provided for a wide range of systems in GitLab and GitHub releases.
+Binaries are provided for a wide range of systems in GitHub releases.
 
 Docker images are available at
 https://gitlab.com/lama-corp/infra/tools/whoisd/container_registry.
