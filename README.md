@@ -31,4 +31,4 @@ Copyright Marc 'risson' Schmitt 2026. Licensed under the [EUPL-1.2 or later](./L
 
 ## Releasing
 
-Run the "Release" workflow with the version to be release. The CI takes care of the rest.
+Run the "Release" workflow with the version to be released. The CI takes care of the rest.
