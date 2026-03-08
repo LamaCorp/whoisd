@@ -10,6 +10,8 @@ FROM debian:12
 
 WORKDIR /app
 
+COPY ./LICENSE /app/LICENSE
+
 COPY --from=builder /go/src/whoisd/whoisd /app/whoisd
 
 CMD ["/app/whoisd"]
