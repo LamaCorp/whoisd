@@ -67,10 +67,10 @@ jobs:
             -o dist/${{ steps.names.outputs.binary }} \
             ./...
       - name: archive
-        if: matrix.goos != "windows"
+        if: "matrix.goos != 'windows'"
         run: tar -czf dist/${{ steps.names.outputs.archive }} -C dist ${{ steps.names.outputs.binary }}
       - name: archive
-        if: matrix.goos == "windows"
+        if: "matrix.goos == 'windows'"
         run: cd dist && zip ${{ steps.names.outputs.archive }} ${{ steps.names.outputs.binary }}
       - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
