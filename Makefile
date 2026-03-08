@@ -1,14 +1,17 @@
 TEST?=$$(go list ./... | grep -v 'vendor')
 BINARY=whoisd
-VERSION=0.1.0
+VERSION=0.0.0
 OS_ARCH=linux_amd64
 
 all: build
 
+lint:
+	golangci-lint run --timeout 5000s --verbose
+
 build:
 	go build -o ${BINARY}
 
-release:
+build-all:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_darwin_amd64
 	GOOS=freebsd GOARCH=386 go build -o ./bin/${BINARY}_${VERSION}_freebsd_386
 	GOOS=freebsd GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_freebsd_amd64
