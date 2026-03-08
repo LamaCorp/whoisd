@@ -24,3 +24,7 @@ Available environment variables:
 
 - `WHOISD_LISTEN`: defaults to `:43`
 - `WHOISD_LOG_LEVEL`: defaults to `warn`
+
+## License
+
+Copyright Marc 'risson' Schmitt 2026. Licensed under the [EUPL-1.2 or later](./LICENSE) license.
