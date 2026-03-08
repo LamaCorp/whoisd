@@ -1,0 +1,121 @@
+---
+name: Main
+
+"on":
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v8
+        with:
+          version: latest
+          args: --timeout 5000s --verbose
+          skip-cache: true
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: go.mod
+      - run: make build-all
+  test-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: go.mod
+      - run: make test
+  test-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6
+        with:
+          go-version-file: go.mod
+      - run: sudo apt install -y whois
+      - run: make build
+      - run: |
+          WHOISD_LISTEN=:10043 WHOISD_LOG_LEVEL=debug ./whoisd &
+          whois -h localhost -p 10043 example.com
+  build-container:
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to upload container images to ghcr.io
+      packages: write
+      # Needed for attestation
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        if: |
+          github.repository == 'LamaCorp/whoisd' &&
+            (github.event_name != 'pull_request' ||
+             github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        id: push
+        with:
+          file: Dockerfile
+          context: .
+          build-args: |
+            VERSION=${{ github.event.pull_request.head.sha }}
+            COMMIT=${{ github.event.pull_request.head.sha }}
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/lamacorp/whoisd-dev:${{ github.event.pull_request.head.sha }}
+          push: |
+            ${{ github.repository == 'LamaCorp/whoisd' &&
+              (github.event_name != 'pull_request' ||
+              github.event.pull_request.head.repo.full_name == github.repository) }}
+          cache-from: type=registry,ref=ghcr.io/lamacorp/whoisd-dev:buildcache
+          cache-to: |
+            ${{ (github.repository == 'LamaCorp/whoisd' &&
+                (github.event_name != 'pull_request' ||
+                  github.event.pull_request.head.repo.full_name == github.repository))
+                && 'type=registry,ref=ghcr.io/lamacorp/whoisd-dev:buildcache,mode=max'
+                || ''
+            }}
+      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        id: attest
+        if: |
+          github.repository == 'LamaCorp/whoisd' &&
+            (github.event_name != 'pull_request' ||
+             github.event.pull_request.head.repo.full_name == github.repository)
+        with:
+          subject-name: ghcr.io/lamacorp/whoisd-dev
+          subject-digest: "${{ steps.push.outputs.digest }}"
+          push-to-registry: true
+  ci-main-mark:
+    if: always()
+    needs:
+      - lint
+      - build
+      - test-unit
+      - test-integration
+      - build-container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe # release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
