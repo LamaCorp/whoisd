@@ -83,9 +83,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/LamaCorp/whoisd-dev:${{ github.event.pull_request.head.sha }}
           push: |
-            github.repository == 'LamaCorp/whoisd' &&
+            ${{ github.repository == 'LamaCorp/whoisd' &&
               (github.event_name != 'pull_request' ||
-              github.event.pull_request.head.repo.full_name == github.repository)
+              github.event.pull_request.head.repo.full_name == github.repository) }}
           cache-from: type=registry,ref=ghcr.io/LamaCorp/whoisd-dev:buildcache
           cache-to: |
             ${{ (github.repository == 'LamaCorp/whoisd' &&
