@@ -18,7 +18,7 @@ RUN go build \
   -o whoisd \
   ./...
 
-FROM debian:13@sha256:55a15a112b42be10bfc8092fcc40b6748dc236f7ef46a358d9392b339e9d60e8
+FROM debian:13@sha256:35b8ff74ead4880f22090b617372daff0ccae742eb5674455d542bef71ef1999
 
 ARG VERSION
 ARG COMMIT
