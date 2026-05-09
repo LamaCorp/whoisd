@@ -52,6 +52,7 @@ jobs:
       - run: make build
       - run: |
           WHOISD_LISTEN=:10043 WHOISD_LOG_LEVEL=debug ./whoisd &
+          sleep 1
           whois -h localhost -p 10043 example.com
   build-container:
     runs-on: ubuntu-latest
