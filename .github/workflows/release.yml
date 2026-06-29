@@ -72,7 +72,7 @@ jobs:
       - name: archive
         if: "matrix.goos == 'windows'"
         run: cd dist && zip ${{ steps.names.outputs.archive }} ${{ steps.names.outputs.binary }}
-      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+      - uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-path: dist/${{ steps.names.outputs.archive }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -112,7 +112,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ghcr.io/lamacorp/whoisd:v${{ inputs.version }}
           push: true
-      - uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+      - uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         id: attest
         with:
           subject-name: ghcr.io/lamacorp/whoisd
